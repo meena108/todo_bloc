@@ -1,21 +1,23 @@
 class TodoModel {
+  String? id;
   String? name;
   String? desc;
   DateTime? date;
 
   TodoModel({required this.date, required this.name, required this.desc});
 
-  TodoModel.fromJson(Map<String, dynamic> map) {
+  TodoModel.fromJson(Map<String, dynamic> map, String todoId) {
+    id = todoId;
     name = map["name"];
-    desc = map["desc"];
+    desc = map["description"];
     date = DateTime.parse(map["date"]);
   }
 
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      'desc': desc,
-      'date': date,
+      'description': desc,
+      'date': date!.toIso8601String(),
     };
   }
 }

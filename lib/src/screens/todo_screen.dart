@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:todo/src/blocs/todo_bloc.dart';
 import 'package:todo/src/blocs/todo_bloc_provider.dart';
 import 'package:todo/src/model/todo_model.dart';
@@ -9,45 +10,62 @@ import 'package:todo/src/widgets/shared/app_colors.dart';
 class TodoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final TodoBloc bloc = TodoBlocProvider.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Your todos", style: TextStyle(color: blackColor87)),
-        backgroundColor: whiteColor,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.add,
-              size: 40,
-              color: blackColor87,
-            ),
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) {
-                return CreateOrUpdateTodo(
-                  bloc: bloc,
-                );
-              }));
-            },
+    return TodoBlocProvider(
+      child: Builder(builder: (context) {
+        final TodoBloc bloc = TodoBlocProvider.of(context);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text("Your todos", style: TextStyle(color: blackColor87)),
+            backgroundColor: whiteColor,
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.add,
+                  size: 40,
+                  color: blackColor87,
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) {
+                    return CreateOrUpdateTodo(
+                      bloc: bloc,
+                    );
+                  }));
+                },
+              ),
+              SizedBox(
+                width: 16,
+              )
+            ],
           ),
-          SizedBox(
-            width: 16,
-          )
-        ],
-      ),
-      body: _buildBody(bloc),
+          body: _buildBody(bloc),
+        );
+      }),
     );
   }
 
   Widget _buildBody(TodoBloc bloc) {
-    return StreamBuilder(
-        stream: bloc.todoListStream,
-        builder: (context, AsyncSnapshot<List<TodoModel>> snapshot) {
-          print(
-              "snapshot data is ${snapshot.data} and has data ${snapshot.hasData}");
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildGetStarted(context, bloc);
+    return FutureBuilder(
+        future: bloc.fetchAllTodos(),
+        builder: (context, futureSnapshot) {
+          if (futureSnapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(),
+            );
           }
-          return _buildTodoList(context, bloc, snapshot.data!);
+          return Container(
+            child: StreamBuilder(
+              stream: bloc.todoListStream,
+              builder: (context, AsyncSnapshot<List<TodoModel>> snapshot) {
+                print(
+                    "snapshot data is ${snapshot.data} and has data ${snapshot.hasData}");
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return _buildGetStarted(context, bloc);
+                }
+                return _buildTodoList(context, bloc, snapshot.data!);
+              },
+            ),
+          );
         });
   }
 
@@ -99,20 +117,47 @@ class TodoScreen extends StatelessWidget {
       itemCount: list.length,
       itemBuilder: (context, int index) {
         final single = list[index];
-        return Card(
-          child: ListTile(
-            title: Text(single.name!),
-            subtitle: Text(single.desc!),
-            trailing: Text(single.date!.toIso8601String().substring(0, 10)),
-            onTap: () {
-              bloc.setEditingTodo(single);
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) {
-                return CreateOrUpdateTodo(bloc: bloc);
-              }));
-            },
-          ),
-        );
+        return _buildSingleTodoItem(single, bloc, context);
       },
+    );
+  }
+
+  Widget _buildSingleTodoItem(
+      TodoModel single, TodoBloc bloc, BuildContext context) {
+    return Slidable(
+      actionPane: SlidableDrawerActionPane(),
+      actionExtentRatio: 0.25,
+      actions: <Widget>[
+        IconSlideAction(
+          caption: 'Update',
+          color: Colors.green,
+          icon: Icons.edit,
+          onTap: () {
+            bloc.setEditingTodo(single);
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) {
+              return CreateOrUpdateTodo(bloc: bloc);
+            }));
+          },
+        ),
+      ],
+      secondaryActions: <Widget>[
+        IconSlideAction(
+          caption: 'Delete',
+          color: Colors.red,
+          icon: Icons.delete,
+          onTap: () {
+            bloc.deleteTodo(single);
+          },
+        ),
+      ],
+      child: Card(
+        child: ListTile(
+          title: Text(single.name!),
+          subtitle: Text(single.desc!),
+          trailing: Text(single.date!.toIso8601String().substring(0, 10)),
+          onTap: () {},
+        ),
+      ),
     );
   }
 }

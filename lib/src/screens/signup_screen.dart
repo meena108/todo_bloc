@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:todo/src/blocs/auth_bloc.dart';
 import 'package:todo/src/blocs/auth_bloc_provider.dart';
+import 'package:todo/src/screens/todo_screen.dart';
 import 'package:todo/src/utils/snackbar_helper.dart';
 import 'package:todo/src/widgets/custom_app_bar.dart';
 import 'package:todo/src/widgets/input_email.dart';
@@ -17,43 +18,46 @@ class SignUpScreen extends StatelessWidget {
       TextEditingController(text: "password");
 
   @override
-  Widget build(BuildContext context) {
-    final AuthBloc authBloc = AuthBlocProvider.of(context);
+  Widget build(BuildContext ctx) {
     return AuthBlocProvider(
-      child: Scaffold(
-        appBar: buildCustomAppBar(
-          leading: IconButton(
-            icon: Icon(
-              Icons.close,
-              color: blackColor87,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          context: context,
-          subTitle: "Create your \n account",
-        ),
-        body: Column(
-          children: <Widget>[
-            Expanded(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  SizedBox(height: 24),
-                  InputName(),
-                  InputPhone(),
-                  InputEmail(controller: _emailController),
-                  InputPassword(controller: _passwordController),
-                  _buildSubmitButton(context, authBloc),
-                  SizedBox(height: 12),
-                  _buildTermsAndConditions(context),
-                  SizedBox(height: 12),
-                ],
+      child: Builder(builder: (context) {
+        final AuthBloc authBloc = AuthBlocProvider.of(context);
+
+        return Scaffold(
+          appBar: buildCustomAppBar(
+            leading: IconButton(
+              icon: Icon(
+                Icons.close,
+                color: blackColor87,
               ),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            _buildSignInSection(context)
-          ],
-        ),
-      ),
+            context: context,
+            subTitle: "Create your \n account",
+          ),
+          body: Column(
+            children: <Widget>[
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    SizedBox(height: 24),
+                    InputName(),
+                    InputPhone(),
+                    InputEmail(controller: _emailController),
+                    InputPassword(controller: _passwordController),
+                    _buildSubmitButton(context, authBloc),
+                    SizedBox(height: 12),
+                    _buildTermsAndConditions(context),
+                    SizedBox(height: 12),
+                  ],
+                ),
+              ),
+              _buildSignInSection(context)
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -143,13 +147,21 @@ class SignUpScreen extends StatelessWidget {
 
   Future _onSubmit(AuthBloc authBloc, BuildContext context) async {
     authBloc.changeLoadingStatus(true);
-    final response = await authBloc.register();
-    authBloc.changeLoadingStatus(false);
-    if (response == null) {
-      //todo show a snackbar message
-      showSnackBar(context, "Signup failed, please try again");
-    } else {
-      //todo navigate to the other screen
+    try {
+      final response = await authBloc.register();
+      authBloc.changeLoadingStatus(false);
+      if (response == null) {
+        showSnackBar(context, "Signup failed, please try again");
+      } else {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) {
+          return TodoScreen();
+        }));
+      }
+    } catch (e) {
+      authBloc.changeLoadingStatus(false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$e")),
+      );
     }
   }
 

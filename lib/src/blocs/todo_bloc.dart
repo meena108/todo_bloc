@@ -31,7 +31,7 @@ class TodoBloc with TodoValidator {
   Function(TodoModel? todo) get setEditingTodo =>
       _editingTodoController.sink.add;
 
-  void addNewTodo() {
+  Future<void> addNewTodo() async {
     List<TodoModel> _existing =
         _todoListController.hasValue ? _todoListController.value : [];
     int existingTodoIndex = _existing
@@ -43,7 +43,10 @@ class TodoBloc with TodoValidator {
     }
     print("Index is this one current one ${_existing.map((e) => e.toJson())}");
 
-    _existing.add(currentTodo);
+    final newId = await api.createTodo(currentTodo);
+    final newTodo = currentTodo;
+    newTodo.id = newId;
+    _existing.add(newTodo);
     print("Index is this one current two ${_existing.map((e) => e.toJson())}");
     print("Index is this one current empty ${_existing.isEmpty}");
 
@@ -55,8 +58,13 @@ class TodoBloc with TodoValidator {
         _todoListController.hasValue ? _todoListController.value : [];
     int index = _existing.indexOf(editingTodo!);
     _existing.removeAt(index);
-    _existing.insert(index, currentTodo);
+    print("Existing todo ${editingTodo!.id}");
+
+    final updatingTodo = currentTodo;
+    updatingTodo.id = editingTodo!.id;
+    _existing.insert(index, updatingTodo);
     _todoListController.sink.add(_existing);
+    api.updateTodo(updatingTodo);
   }
 
   void deleteTodo(TodoModel todo) {
@@ -67,6 +75,7 @@ class TodoBloc with TodoValidator {
     _existing.removeAt(index);
 
     _todoListController.sink.add(_existing);
+    api.deleteTodo(todo.id!);
   }
 
   //stream getters
@@ -113,5 +122,14 @@ class TodoBloc with TodoValidator {
     _dateController.close();
     _todoListController.close();
     _editingTodoController.close();
+  }
+
+  Future<void> fetchAllTodos() async {
+    final list = await api.getAllTodos();
+    if (list != null) {
+      _todoListController.sink.add(list);
+    } else {
+      _todoListController.sink.add([]);
+    }
   }
 }
